@@ -187,11 +187,11 @@ create index if not exists bm_title on {table_name} (lower(title) asc, last_mod 
                 self.error = e
         return None
 
-    def get_by_uuid(self, value: str) -> Record | None:
-        return self.get_by_field('uuid', value)
+    def get_by_uuid(self, uuid: str) -> Record | None:
+        return self.get_by_field('uuid', uuid)
 
-    def get_by_url(self, value: str) -> Record | None:
-        return self.get_by_field('url', value)
+    def get_by_url(self, url: str) -> Record | None:
+        return self.get_by_field('url', url)
 
     def insert(self, r: Record, commit: bool) -> bool:
         sql = insert_sql(self.table_name, Record.names)
@@ -222,11 +222,11 @@ create index if not exists bm_title on {table_name} (lower(title) asc, last_mod 
                 self.conn.rollback()
         return False
 
-    def del_by_uuid(self, value: str, commit: bool) -> bool:
+    def del_by_uuid(self, uuid: str, commit: bool) -> bool:
         sql = f'delete from {self.table_name} where uuid = :uuid'
         with self._cursor() as cur:
             try:
-                cur.execute(sql, {'uuid': value})
+                cur.execute(sql, {'uuid': uuid})
                 if commit:
                     self.conn.commit()
                 return True
@@ -236,6 +236,11 @@ create index if not exists bm_title on {table_name} (lower(title) asc, last_mod 
         return False
 
     def mark_del(self, uuid: str, commit: bool) -> bool:
+        r = self.get_by_uuid(uuid)
+        if not r:
+            return True
+        if r.deleted:
+            return self.del_by_uuid(uuid, commit)
         deleted = int(time.time())
         sql = f'update {self.table_name} set deleted = {deleted} where uuid = :uuid'
         with self._cursor() as cur:
@@ -271,6 +276,7 @@ create index if not exists bm_title on {table_name} (lower(title) asc, last_mod 
         if not edit_record(r):
             return EDIT.NONE
         r.last_mod = int(time.time())
+        r.deleted = 0  # the only way to undo delete
         if url == r.url:
             # most cases
             if not self.update(r, True):
@@ -305,9 +311,13 @@ create index if not exists bm_title on {table_name} (lower(title) asc, last_mod 
             return EDIT.ERROR
         return EDIT.OK2
 
-    def sort(self, sort: SORT) -> Generator[Record]:
+    def sort(self, sort: SORT, deleted: bool) -> Generator[Record]:
         names_s = ', '.join(Record.names)
-        sql = f'select {names_s} from {self.table_name} where deleted = 0'
+        sql = f'select {names_s} from {self.table_name}'
+        if not deleted:
+            sql += ' where deleted = 0'
+        else:
+            sql += ' where deleted != 0'
         match sort:
             case SORT.LAST_MOD:
                 sql += ' order by last_mod desc'
