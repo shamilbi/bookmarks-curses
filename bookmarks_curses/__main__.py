@@ -29,6 +29,8 @@ from .utils import (
     str2clipboard,
 )
 
+APP_HEADER = f'bookmarks-curses v{__version__} (h - Help)'
+
 HELP = [
     ("h", "This help screen"),
     ("q, Esc", "Quit the program"),
@@ -45,6 +47,7 @@ HELP = [
     ("L", "Launch URL"),
     ("I", "Import html (Diigo export Chrome)"),
     ("s", "Search records"),
+    ("D", "Show/hide deleted records"),
     ("Ctrl-L", "Copy URL to clipboard"),
     ("Ctrl-T", "Copy Title to clipboard"),
 ]
@@ -67,6 +70,7 @@ class Main(App):  # pylint: disable=too-many-instance-attributes,too-many-public
 
         self.records: list[str] = []  # uuid
         self.filter = FilterString()
+        self.show_deleted = False
         self.sort(SORT.LAST_MOD)
 
         # title, last_mod, created, tags
@@ -76,7 +80,7 @@ class Main(App):  # pylint: disable=too-many-instance-attributes,too-many-public
 
     def sort(self, sortby: SORT):
         self.sortedby = sortby
-        self.records = [r.uuid for r in self.db.sort(sortby) if self.filter_record(r)]
+        self.records = [r.uuid for r in self.db.sort(sortby, self.show_deleted) if self.filter_record(r)]
 
     def sort2(self, sortby: SORT):
         idx = self.win.idx
@@ -104,6 +108,7 @@ class Main(App):  # pylint: disable=too-many-instance-attributes,too-many-public
         status ...
         '''
         maxy, maxx = self.screen_size
+        self.win_header = self.screen.derwin(1, maxx, 0, 0)
 
         rows, cols = (maxy - 6, maxx)
         cols2 = min(cols // 3, 35)
@@ -181,11 +186,18 @@ class Main(App):  # pylint: disable=too-many-instance-attributes,too-many-public
                     headers.append(f'{title}:')
         return self.row_string.value(*headers)
 
+    def show_header(self):
+        s = APP_HEADER
+        if self.show_deleted:
+            s += ' - deleted!'
+        self.win_header.erase()
+        win_addstr(self.win_header, 0, 1, s)
+        self.win_header.refresh()
+
     def refresh_all(self):
         self.screen.clear()
 
-        s = f' bookmarks-curses v{__version__} (h - Help)'
-        win_addstr(self.screen, 0, 0, s)
+        self.show_header()
 
         win_addstr(self.screen, 1, 0, self.prompt_search)
         self.screen.refresh()
@@ -285,6 +297,10 @@ class Main(App):  # pylint: disable=too-many-instance-attributes,too-many-public
                 self.run_url()
             elif char == 'I':
                 self.import_html()
+            elif char == 'D':
+                self.show_deleted = not self.show_deleted
+                self.show_header()
+                self.sort2(self.sortedby)
             elif char.upper() == 'H':  # Print help screen
                 win_help(self.win.win, HELP)
                 self.refresh_all()
