@@ -3,7 +3,7 @@ import curses.ascii
 import os
 import sys
 from signal import SIGINT, SIGTERM, SIGWINCH, signal
-from typing import Generator, Protocol
+from typing import Generator
 
 
 def win_addstr(
