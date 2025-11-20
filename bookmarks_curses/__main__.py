@@ -8,7 +8,8 @@ from functools import partial
 from signal import SIGINT, signal
 
 from . import __version__
-from .curses_utils import App, List, ask_delete, input_search, win_addstr, win_help
+from .curses_utils import App, ask_delete, input_search, win_addstr, win_help
+from .curses_utils.list2 import List2, ListProto2
 from .db import (
     EDIT,
     SORT,
@@ -52,14 +53,14 @@ HELP = [
     ("Ctrl-T", "Copy Title to clipboard"),
 ]
 
-HEADER_KEYS = ('t', 'm', 'c', 'g')
-HEADER: dict[str, str] = dict(zip(HEADER_KEYS, ('Title', 'ModTime', 'Created', 'Tags')))
+HEADER_KEYS = ('t', 'm', 'c', 'u')
+HEADER: dict[str, str] = dict(zip(HEADER_KEYS, ('Title', 'ModTime', 'Created', 'URL')))
 
 SORT_UP = '\u2191'
 SORT_DOWN = '\u2193'
 
 
-class Main(App):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
+class Main(App, ListProto2):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
     def __init__(self, db: Db, screen):
         super().__init__(screen)
 
@@ -74,7 +75,8 @@ class Main(App):  # pylint: disable=too-many-instance-attributes,too-many-public
         self.sort(SORT.LAST_MOD)
 
         # title, last_mod, created, tags
-        self.row_string = RowString(70, 19, 19, 0)
+        self.row_string = RowString(70, 19, 19, 0)  # title, last_mod, created, url
+        self.row_string2 = RowString(4, 70 - 4)  # indent, tags
 
         self.create_windows()
 
@@ -113,7 +115,7 @@ class Main(App):  # pylint: disable=too-many-instance-attributes,too-many-public
         rows, cols = (maxy - 6, maxx)
         cols2 = min(cols // 3, 35)
         cols1 = cols - cols2
-        if no_win2 := cols1 < sum(self.row_string.widths[:2]):
+        if no_win2 := cols1 < sum(self.row_string.widths[:3]):
             cols1 = cols
 
         prompt = self.prompt_search = ' Search: '
@@ -121,7 +123,7 @@ class Main(App):  # pylint: disable=too-many-instance-attributes,too-many-public
         self.win_search = self.screen.derwin(1, maxx - len_, 1, len_)
 
         win = self.screen.derwin(rows, cols1 - 3, 4, 2)
-        self.win = List(win, self, current_color=curses.color_pair(1) | curses.A_BOLD)
+        self.win = List2(win, self, current_color=curses.color_pair(1))
 
         if no_win2:
             self.win2 = None
@@ -162,10 +164,13 @@ class Main(App):  # pylint: disable=too-many-instance-attributes,too-many-public
             return None
         return self.records[i]
 
-    def get_record_str(self, i: int) -> str:
+    def get_record_str(self, i: int) -> tuple[str, str]:
         if (uuid := self.get_record(i)) and (r := self.db.get_by_uuid(uuid)):
-            return self.row_string.value(r.title, int2time(r.last_mod), int2time(r.created), r.tags)
-        return ''
+            return (
+                self.row_string.value(r.title, int2time(r.last_mod), int2time(r.created), r.url),
+                self.row_string2.value('', r.tags),
+            )
+        return ('', '')
 
     def records_len(self) -> int:
         return len(self.records)
