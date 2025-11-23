@@ -24,6 +24,7 @@ The current hotkeys are:
     * I: Import html (Diigo export Chrome)
     * s: Search records
     * D: Show/hide deleted records
+    * U: Show URL as QR-code
     * Ctrl-L: Copy URL to clipboard
     * Ctrl-T: Copy Title to clipboard
 
