@@ -2,6 +2,7 @@ import curses
 import curses.ascii
 import os
 import sys
+from contextlib import contextmanager
 from signal import SIGINT, SIGTERM, SIGWINCH, signal
 from typing import Generator
 
@@ -184,16 +185,26 @@ class App:
                 pass
 
 
-def input_search(app: App, prompt: str) -> tuple[bool, str]:  # ok, search str
+@contextmanager
+def escape2terminal(app: App):
+    def _clear():
+        # clear terminal for privacy
+        os.system('cls' if os.name == 'nt' else 'clear')
+
     curses.endwin()
     old = signal(SIGINT, app.orig_sigint)
     try:
-        return (True, input(prompt))
+        _clear()
+        yield
     except KeyboardInterrupt:
         pass
     finally:
-        # clear terminal for privacy
-        os.system('cls' if os.name == 'nt' else 'clear')
+        _clear()
         app.screen.refresh()
         signal(SIGINT, old)
+
+
+def input_search(app: App, prompt: str) -> tuple[bool, str]:  # ok, search str
+    with escape2terminal(app):
+        return (True, input(prompt))
     return (False, '')
