@@ -5,10 +5,9 @@ import shutil
 import subprocess
 import webbrowser
 from functools import partial
-from signal import SIGINT, signal
 
 from . import __version__
-from .curses_utils import App, ask_delete, input_search, win_addstr, win_help
+from .curses_utils import App, ask_delete, escape2terminal, input_search, win_addstr, win_help
 from .curses_utils.list2 import List2, ListProto2
 from .db import (
     EDIT,
@@ -269,12 +268,10 @@ class Main(App, ListProto2):  # pylint: disable=too-many-instance-attributes,too
             return
         if r.url:
             if shutil.which("qrencode"):
-                curses.endwin()
-                os.system('cls' if os.name == 'nt' else 'clear')
-                print(f'URL: {r.url}')
-                subprocess.run(['qrencode', '-t', 'ansiutf8', '-o', '-', r.url], check=False)
-                input('Press Enter to continue...')
-                self.screen.refresh()
+                with escape2terminal(self):
+                    print(f'URL: {r.url}')
+                    subprocess.run(['qrencode', '-t', 'ansiutf8', '-o', '-', r.url], check=False)
+                    input('Press Enter to continue...')
             else:
                 self.status('qrencode not found!')
         else:
@@ -343,43 +340,39 @@ class Main(App, ListProto2):  # pylint: disable=too-many-instance-attributes,too
             pass
         else:
             return
-        curses.endwin()
-        match self.db.edit_record(r):
+        res = EDIT.NONE
+        with escape2terminal(self):
+            res = self.db.edit_record(r)
+        match res:
             case EDIT.NONE:
-                self.screen.refresh()
+                pass
             case EDIT.OK1:
                 self.win.refresh()
             case EDIT.OK2:
-                self.screen.refresh()
                 self.sort2(self.sortedby)
             case _:
-                self.screen.refresh()
                 self.status(f'error: {self.db.error}')
 
     def insert_record(self, i: int):
-        curses.endwin()
         r = Record.create()
-        match self.db.insert_record(r):
+        res = EDIT.NONE
+        with escape2terminal(self):
+            res = self.db.insert_record(r)
+        match res:
             case EDIT.NONE:
-                self.screen.refresh()
+                pass
             case EDIT.OK1:
                 self.records.insert(i, r.uuid)
                 self.win.refresh()
             case EDIT.OK2:
                 self.records.insert(i, r.uuid)
-                self.screen.refresh()
                 self.sort2(self.sortedby)
             case _:
-                self.screen.refresh()
                 self.status(f'error: {self.db.error}')
 
     def import_html(self):
-        curses.endwin()
-        old = signal(SIGINT, self.orig_sigint)
-        try:
+        with escape2terminal(self):
             res = import_html(self.db)
-        finally:
-            signal(SIGINT, old)
         self.sort(self.sortedby)
         self.win.refresh()
         if res.ok:
