@@ -49,6 +49,7 @@ HELP = [
     ("I", "Import html (Diigo export Chrome)"),
     ("s", "Search records"),
     ("D", "Show/hide deleted records"),
+    ("U", "Show URL as QR-code"),
     ("Ctrl-L", "Copy URL to clipboard"),
     ("Ctrl-T", "Copy Title to clipboard"),
 ]
@@ -261,6 +262,24 @@ class Main(App, ListProto2):  # pylint: disable=too-many-instance-attributes,too
         except ImportError:
             self.status(f'Could not load python module "webbrowser" for {r.url=}')
 
+    def show_url(self):
+        if (uuid := self.get_record(self.win.idx)) and (r := self.db.get_by_uuid(uuid)):
+            pass
+        else:
+            return
+        if r.url:
+            if shutil.which("qrencode"):
+                curses.endwin()
+                os.system('cls' if os.name == 'nt' else 'clear')
+                print(f'URL: {r.url}')
+                subprocess.run(['qrencode', '-t', 'ansiutf8', '-o', '-', r.url], check=False)
+                input('Press Enter to continue...')
+                self.screen.refresh()
+            else:
+                self.status('qrencode not found!')
+        else:
+            self.status('URL is empty')
+
     def url2clipboard(self):
         if (uuid := self.get_record(self.win.idx)) and (r := self.db.get_by_uuid(uuid)):
             pass
@@ -306,6 +325,8 @@ class Main(App, ListProto2):  # pylint: disable=too-many-instance-attributes,too
                 self.show_deleted = not self.show_deleted
                 self.show_header()
                 self.sort2(self.sortedby)
+            elif char == 'U':
+                self.show_url()
             elif char.upper() == 'H':  # Print help screen
                 win_help(self.win.win, HELP)
                 self.refresh_all()
