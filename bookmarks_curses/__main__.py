@@ -5,10 +5,11 @@ import shutil
 import subprocess
 import webbrowser
 from functools import partial
+from typing import Generator
 
 from . import __version__
 from .curses_utils import App, ask_delete, escape2terminal, input_search, win_addstr, win_help
-from .curses_utils.list2 import List2, ListProto2
+from .curses_utils.list3 import List3, ListProto3
 from .db import (
     EDIT,
     SORT,
@@ -60,7 +61,7 @@ SORT_UP = '\u2191'
 SORT_DOWN = '\u2193'
 
 
-class Main(App, ListProto2):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
+class Main(App, ListProto3):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
     def __init__(self, db: Db, screen):
         super().__init__(screen)
 
@@ -123,7 +124,7 @@ class Main(App, ListProto2):  # pylint: disable=too-many-instance-attributes,too
         self.win_search = self.screen.derwin(1, maxx - len_, 1, len_)
 
         win = self.screen.derwin(rows, cols1 - 3, 4, 2)
-        self.win = List2(win, self, current_color=curses.color_pair(1))
+        self.win = List3(win, self, height=2, current_color=curses.color_pair(1))
 
         if no_win2:
             self.win2 = None
@@ -164,13 +165,10 @@ class Main(App, ListProto2):  # pylint: disable=too-many-instance-attributes,too
             return None
         return self.records[i]
 
-    def get_record_str(self, i: int) -> tuple[str, str]:
+    def get_record_str(self, i: int) -> Generator[str]:
         if (uuid := self.get_record(i)) and (r := self.db.get_by_uuid(uuid)):
-            return (
-                self.row_string.value(r.title, int2time(r.last_mod), int2time(r.created), r.url),
-                self.row_string2.value('', r.tags),
-            )
-        return ('', '')
+            yield self.row_string.value(r.title, int2time(r.last_mod), int2time(r.created), r.url)
+            yield self.row_string2.value('', r.tags)
 
     def records_len(self) -> int:
         return len(self.records)
