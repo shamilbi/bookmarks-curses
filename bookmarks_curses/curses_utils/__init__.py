@@ -206,5 +206,8 @@ def escape2terminal(app: App):
 
 def input_search(app: App, prompt: str) -> tuple[bool, str]:  # ok, search str
     with escape2terminal(app):
-        return (True, input(prompt))
+        try:
+            return (True, input(prompt))
+        except KeyboardInterrupt:
+            pass
     return (False, '')
