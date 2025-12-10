@@ -271,7 +271,13 @@ create index if not exists bm_title on {table_name} (lower(title) asc, last_mod 
             return MERGE.ERROR
         return MERGE.OK
 
-    def edit_record(self, r: Record) -> EDIT:  # pylint: disable=too-many-return-statements
+    def edit_record(self, r: Record) -> EDIT:
+        try:
+            return self._edit_record(r)
+        except KeyboardInterrupt:
+            return EDIT.NONE
+
+    def _edit_record(self, r: Record) -> EDIT:  # pylint: disable=too-many-return-statements
         url = r.url
         if not edit_record(r):
             return EDIT.NONE
@@ -296,6 +302,12 @@ create index if not exists bm_title on {table_name} (lower(title) asc, last_mod 
         return EDIT.OK2
 
     def insert_record(self, r: Record) -> EDIT:
+        try:
+            return self._insert_record(r)
+        except KeyboardInterrupt:
+            return EDIT.NONE
+
+    def _insert_record(self, r: Record) -> EDIT:
         if not edit_record(r):
             return EDIT.NONE
         r2 = self.get_by_url(r.url)
