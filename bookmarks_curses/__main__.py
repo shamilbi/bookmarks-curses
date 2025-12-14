@@ -173,8 +173,8 @@ class Main(App, ListProto3):  # pylint: disable=too-many-instance-attributes,too
     def records_len(self) -> int:
         return len(self.records)
 
-    def filter_record(self, record):
-        return self.filter.found(record.title, record.tags)
+    def filter_record(self, record: Record):
+        return self.filter.found(record.title, record.tags, record.url)
 
     def create_header(self):
         headers = []
