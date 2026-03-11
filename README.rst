@@ -5,8 +5,12 @@ bookmarks-curses
 
 bookmarks-curses is a bookmark manager as a curses frontend to SQLite database.
 
-Editing a record is done with Vim, using a temporary file located in /dev/shm. To launch a URL, xdg-open is used, while copying to the clipboard is handled by xsel.
+Editing a record is done with Vim, using a temporary file located in /dev/shm.
+To launch a URL, xdg-open is used, while copying to the clipboard is handled by xsel.
 To display a URL as a QR code in the terminal, the `qrencode`_ command is used.
+
+If you'd like to store your bookmarks file in an encrypted directory, you can create one using the command
+"cryfs -o noatime dir mountpoint" (`cryfs`_) and place your file in mountpoint/.
 
 The current hotkeys are:
     * h: help screen
@@ -34,3 +38,4 @@ The current hotkeys are:
 .. |github| image:: https://img.shields.io/github/v/tag/shamilbi/bookmarks-curses?label=github
             :target: https://github.com/shamilbi/bookmarks-curses/
 .. _qrencode: https://github.com/fukuchi/libqrencode
+.. _cryfs: https://github.com/cryfs/cryfs
