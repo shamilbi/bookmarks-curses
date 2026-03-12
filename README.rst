@@ -32,6 +32,7 @@ The current hotkeys are:
     * U: Show URL as QR-code
     * Ctrl-L: Copy URL to clipboard
     * Ctrl-T: Copy Title to clipboard
+    * Ctrl-G: Copy Tags to clipboard
 
 .. |pypi| image:: https://img.shields.io/pypi/v/bookmarks-curses
           :target: https://pypi.org/project/bookmarks-curses/
