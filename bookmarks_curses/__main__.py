@@ -52,6 +52,7 @@ HELP = [
     ("U", "Show URL as QR-code"),
     ("Ctrl-L", "Copy URL to clipboard"),
     ("Ctrl-T", "Copy Title to clipboard"),
+    ("Ctrl-G", "Copy Tags to clipboard"),
 ]
 
 HEADER_KEYS = ('t', 'm', 'c', 'u')
@@ -297,6 +298,17 @@ class Main(App, ListProto3):  # pylint: disable=too-many-instance-attributes,too
         else:
             self.status('Title is empty')
 
+    def tags2clipboard(self):
+        if (uuid := self.get_record(self.win.idx)) and (r := self.db.get_by_uuid(uuid)):
+            pass
+        else:
+            return
+        if r.tags:
+            str2clipboard(r.tags)
+            self.status('Tags copied to clipboard')
+        else:
+            self.status('Tags is empty')
+
     def input_loop(self):  # pylint: disable=too-many-branches,too-many-statements
         for char_ord in self.getch():
             char = chr(char_ord)
@@ -329,6 +341,8 @@ class Main(App, ListProto3):  # pylint: disable=too-many-instance-attributes,too
                 self.url2clipboard()
             elif char_ord == 20:  # ^T
                 self.title2clipboard()
+            elif char_ord == 7:  # ^G
+                self.tags2clipboard()
             else:
                 name = curses.keyname(char_ord).decode('utf-8')
                 self.status(f'{char_ord=}, {name=}')
