@@ -156,7 +156,9 @@ class App:
         finally:
             self.screen.nodelay(False)
         if ch == -1:
-            self.shutdown()
+            # https://docs.python.org/3/library/curses.html#curses.window.getch
+            # In no-delay mode, return -1 if there is no input, otherwise wait until a key is pressed
+            return
         self.handle_alt_key(ch)
 
     def getch(self) -> Generator[int, None, None]:
