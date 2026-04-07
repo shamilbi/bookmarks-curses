@@ -7,8 +7,8 @@ import webbrowser
 from functools import partial
 from typing import Generator
 
-from . import __version__
-from .curses_utils import App, ask_delete, escape2terminal, input_search, win_addstr, win_help
+from . import __project_name__, __version__
+from .curses_utils import App, ask_delete, escape2terminal, input_search, set_terminal_title, win_addstr, win_help
 from .curses_utils.list3 import List3, ListProto3
 from .db import (
     EDIT,
@@ -30,7 +30,7 @@ from .utils import (
     str2clipboard,
 )
 
-APP_HEADER = f'bookmarks-curses v{__version__} (h - Help)'
+APP_HEADER = f'{__project_name__} v{__version__} (h - Help)'
 
 HELP = [
     ("h", "This help screen"),
@@ -421,6 +421,7 @@ def main():
         return
     with sqlite_db(fpath) as db:
         main2_ = partial(main2, db)
+        set_terminal_title(f'{__project_name__} v{__version__}')
         curses.wrapper(main2_)
 
 
