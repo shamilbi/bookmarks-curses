@@ -1,1 +1,2 @@
-__version__ = '0.9.1'
+__project_name__ = 'bookmarks-curses'
+__version__ = '0.10.0'
