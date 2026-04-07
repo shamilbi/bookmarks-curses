@@ -8,7 +8,7 @@ from functools import partial
 from typing import Generator
 
 from . import __project_name__, __version__
-from .curses_utils import App, ask_delete, escape2terminal, input_search, set_terminal_title, win_addstr, win_help
+from .curses_utils import App, ask_delete, escape2terminal, input_search, start_curses_app, win_addstr, win_help
 from .curses_utils.list3 import List3, ListProto3
 from .db import (
     EDIT,
@@ -421,8 +421,7 @@ def main():
         return
     with sqlite_db(fpath) as db:
         main2_ = partial(main2, db)
-        set_terminal_title(f'{__project_name__} v{__version__}')
-        curses.wrapper(main2_)
+        start_curses_app(main2_, __project_name__, __version__)
 
 
 if __name__ == '__main__':
