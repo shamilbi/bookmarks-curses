@@ -13,7 +13,7 @@ If you'd like to store your bookmarks file in an encrypted directory, you can cr
 "cryfs -o noatime dir mountpoint" (`cryfs`_) and place your file in mountpoint/.
 
 The current hotkeys are:
-    * h: help screen
+    * F1: help screen
     * q, Esc: Quit the program
     * j, Down: Move selection down
     * k, Up: Move selection up
