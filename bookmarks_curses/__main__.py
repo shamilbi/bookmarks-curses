@@ -30,10 +30,10 @@ from .utils import (
     str2clipboard,
 )
 
-APP_HEADER = f'{__project_name__} v{__version__} (h - Help)'
+APP_HEADER = f'{__project_name__} v{__version__} (F1 - Help)'
 
 HELP = [
-    ("h", "This help screen"),
+    ("F1", "This help screen"),
     ("q, Esc", "Quit the program"),
     ("j, Down", "Move selection down"),
     ("k, Up", "Move selection up"),
@@ -334,7 +334,7 @@ class Main(App, ListProto3):  # pylint: disable=too-many-instance-attributes,too
                 self.sort2(self.sortedby)
             elif char == 'U':
                 self.show_url()
-            elif char.upper() == 'H':  # Print help screen
+            elif char_ord == curses.KEY_F1:
                 win_help(self.win.win, HELP)
                 self.refresh_all()
             elif char_ord == 12:  # ^L
