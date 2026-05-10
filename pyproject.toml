@@ -67,6 +67,7 @@ skip-string-normalization = true
 ]
 reports.score = false
 format.max-line-length = 120
+main.persistent = false
 
 [tool.isort]
 line_length = 120
