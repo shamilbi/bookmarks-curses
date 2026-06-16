@@ -8,8 +8,10 @@ from functools import partial
 from typing import Generator
 
 from . import __project_name__, __version__
-from .curses_utils import App, ask_delete, escape2terminal, input_search, start_curses_app, win_addstr, win_help
+from .curses_utils.app import App, escape2terminal, input_search, start_curses_app
 from .curses_utils.list3 import List3, ListProto3
+from .curses_utils.text import win_help
+from .curses_utils.win import ask_delete, win_addstr
 from .db import (
     EDIT,
     SORT,

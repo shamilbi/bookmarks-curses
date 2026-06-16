@@ -1,7 +1,7 @@
 import curses
 from typing import Generator, Protocol
 
-from . import win_addstr
+from .win import win_addstr
 
 
 class ListProto3(Protocol):
