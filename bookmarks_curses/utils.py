@@ -86,10 +86,18 @@ class FilterString:
 
     def set(self, s: str = ''):
         self.filter_string = s
-        self.filter_list = [i.lower() for i in self.filter_string.split()]
+        words = set(i.lower() for i in s.split())
+        exclude_tags = set(i for i in words if i.startswith('-#'))
+        self.exclude_tags = set(i[1:] for i in exclude_tags)
+        self.words = words - exclude_tags
 
-    def found(self, *fields: str) -> bool:
+    def found(self, *fields: str, tags: str = '') -> bool:
         if not self.filter_string:
             return True
-        fields2 = [i.lower() for i in fields]
-        return all(any(f2.find(s) >= 0 for f2 in fields2) for s in self.filter_list)
+        low_fields = set(i.lower() for i in fields)
+        if tags:
+            low_fields.add(tags.lower())
+            words = set(i.lower() for i in tags.split())
+            if any(i in words for i in self.exclude_tags):
+                return False
+        return all(any(f2.find(s) >= 0 for f2 in low_fields) for s in self.words)
