@@ -3,7 +3,6 @@ from __future__ import annotations
 import io
 import os
 import subprocess
-import tempfile
 import time
 from collections import deque
 from collections.abc import Iterable
@@ -12,6 +11,8 @@ from enum import IntEnum, StrEnum
 from sqlite3 import Cursor, OperationalError, connect
 from typing import Callable, Generator
 from uuid import uuid4
+
+from .file_utils import create_memfd2
 
 
 @contextmanager
@@ -76,7 +77,7 @@ class Record:  # pylint: disable=too-many-instance-attributes
     @staticmethod
     def from_tuple(t: tuple) -> Record:
         r = Record()
-        (r.title, r.url, r.tags, r.notes, r.uuid, r.last_mod, r.created, r.deleted) = t
+        r.title, r.url, r.tags, r.notes, r.uuid, r.last_mod, r.created, r.deleted = t
         return r
 
 
@@ -348,11 +349,27 @@ create index if not exists bm_title on {table_name} (lower(title) asc, last_mod 
                 self.error = e
 
 
+# def edit_record(r: Record) -> bool:
+#     fd = None
+#     fpath = ''
+#     try:
+#         fd, fpath = tempfile.mkstemp(dir='/dev/shm', text=True)
+#         record2file(r, fpath)
+#         t1 = os.path.getmtime(fpath)
+#         subprocess.run(['vim', fpath], check=False)
+#         t2 = os.path.getmtime(fpath)
+#         if t1 != t2:
+#             file2record(fpath, r)  # r changed
+#             return True
+#     finally:
+#         if fd:
+#             os.close(fd)
+#             os.remove(fpath)
+#     return False
+
+
 def edit_record(r: Record) -> bool:
-    fd = None
-    fpath = ''
-    try:
-        fd, fpath = tempfile.mkstemp(dir='/dev/shm', text=True)
+    with create_memfd2('tmp') as (_, fpath):
         record2file(r, fpath)
         t1 = os.path.getmtime(fpath)
         subprocess.run(['vim', fpath], check=False)
@@ -360,10 +377,6 @@ def edit_record(r: Record) -> bool:
         if t1 != t2:
             file2record(fpath, r)  # r changed
             return True
-    finally:
-        if fd:
-            os.close(fd)
-            os.remove(fpath)
     return False
 
 
