@@ -5,12 +5,22 @@ bookmarks-curses
 
 bookmarks-curses is a bookmark manager as a curses frontend to SQLite database.
 
-Editing a record is done with Vim, using a temporary file located in /dev/shm.
-To launch a URL, xdg-open is used, while copying to the clipboard is handled by xsel.
-To display a URL as a QR code in the terminal, the `qrencode`_ command is used.
+It uses external utilities:
+    * vim - to edit a record (using an anonymous file in memory)
+    * xdg-open - to launch a URL
+    * xsel - to copy to the clipboard
+    * `qrencode`_ - to display a URL as a QR code
+    * dd - to fill a file in memory by zeros
 
-If you'd like to store your bookmarks file in an encrypted directory, you can create one using the command
-"cryfs -o noatime dir mountpoint" (`cryfs`_) and place your file in mountpoint/.
+Search string may contain word -#tag to exclude tag #tag from the search result.
+
+If you'd like to store your bookmarks file in an encrypted directory, you can create one using the command `cryfs`_
+
+.. code:: bash
+
+   cryfs -o noatime dir mountpoint
+
+and place your file in mountpoint/.
 
 The current hotkeys are:
     * F1: help screen
