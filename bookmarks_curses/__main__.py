@@ -22,12 +22,12 @@ from .db import (
     record2str,
     sqlite_db,
 )
+from .file_utils import input_file
 from .import_diigo import import_html
 from .utils import (
     FilterString,
     RowString,
     chunkstring,
-    input_file,
     int2time,
     str2clipboard,
 )

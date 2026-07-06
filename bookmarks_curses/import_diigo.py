@@ -4,7 +4,7 @@ import re
 from collections import deque
 
 from .db import MERGE, Db, Record
-from .utils import input_file
+from .file_utils import input_file
 
 
 class Import:

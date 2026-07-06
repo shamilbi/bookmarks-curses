@@ -1,43 +1,6 @@
-# from getpass import getpass
-import glob
-import os
-import readline
 from datetime import datetime
-from functools import lru_cache
 from subprocess import PIPE, Popen
 from typing import Generator
-
-
-@lru_cache(maxsize=1)
-def _glob_text(text: str):
-    l = glob.glob(os.path.expanduser(text) + '*')
-    # dir -> dir/
-    for i, s in enumerate(l):
-        if s and os.path.isdir(s) and not s.endswith('/'):
-            l[i] = s + '/'
-    return l
-
-
-def _complete(text: str, state: int):
-    'https://stackoverflow.com/questions/6656819/filepath-autocompletion-using-users-input'
-    # return (glob.glob(text+'*')+[None])[state]
-    # return (glob.glob(os.path.expanduser(text) + '*') + [None])[state]
-    return (_glob_text(text) + [None])[state]
-
-
-def input_file(prompt: str):
-    readline.set_completer_delims(' \t\n;')
-    readline.parse_and_bind("tab: complete")
-    readline.set_completer(_complete)
-    while True:
-        s = input(f'{prompt}')
-        s = s.strip()
-        if not s:
-            continue
-        s = os.path.expanduser(s)  # ~/filename
-        if os.path.isfile(s) or not os.path.exists(s):
-            return s
-        print(f'{s} is not a file')
 
 
 def int2time(i: int) -> str:
