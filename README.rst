@@ -10,7 +10,7 @@ It uses external utilities:
     * xdg-open - to launch a URL
     * xsel - to copy to the clipboard
     * `qrencode`_ - to display a URL as a QR code
-    * dd - to fill a file in memory by zeros
+    * dd - to fill a file in memory with zeros
 
 Search string may contain word -#tag to exclude tag #tag from the search result.
 
