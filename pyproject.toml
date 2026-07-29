@@ -12,6 +12,7 @@ license-files = ["LICENSE.txt"]
 
 requires-python = ">=3.10"
 dependencies = [
+    "curses-utils2",
 ]
 
 dynamic = ["version"]
