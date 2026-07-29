@@ -2,9 +2,9 @@ import glob
 import os
 import readline
 import subprocess
+from collections.abc import Generator
 from contextlib import contextmanager
 from functools import lru_cache
-from typing import Generator
 
 
 def fill_by_0(fpath):
