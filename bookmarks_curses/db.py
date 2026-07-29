@@ -5,11 +5,10 @@ import os
 import subprocess
 import time
 from collections import deque
-from collections.abc import Iterable
+from collections.abc import Callable, Generator, Iterable
 from contextlib import contextmanager
 from enum import IntEnum, StrEnum
 from sqlite3 import Cursor, OperationalError, connect
-from typing import Callable, Generator
 from uuid import uuid4
 
 from .file_utils import create_memfd2
