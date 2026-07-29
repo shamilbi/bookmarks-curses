@@ -4,14 +4,15 @@ import os
 import shutil
 import subprocess
 import webbrowser
+from collections.abc import Generator
 from functools import partial
-from typing import Generator
+
+from curses_utils2.app import App, escape2terminal, input_search, start_curses_app
+from curses_utils2.list3 import List3, ListProto3
+from curses_utils2.text import win_help
+from curses_utils2.win import ask_delete, win_addstr
 
 from . import __project_name__, __version__
-from .curses_utils.app import App, escape2terminal, input_search, start_curses_app
-from .curses_utils.list3 import List3, ListProto3
-from .curses_utils.text import win_help
-from .curses_utils.win import ask_delete, win_addstr
 from .db import (
     EDIT,
     SORT,
