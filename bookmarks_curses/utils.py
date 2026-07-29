@@ -1,6 +1,8 @@
+from collections.abc import Generator
 from datetime import datetime
 from subprocess import PIPE, Popen
-from typing import Generator
+
+# ruff: noqa: DTZ006 `datetime.datetime.fromtimestamp()` called without a `tz` argument
 
 
 def int2time(i: int) -> str:
@@ -49,18 +51,18 @@ class FilterString:
 
     def set(self, s: str = ''):
         self.filter_string = s
-        words = set(i.lower() for i in s.split())
-        exclude_tags = set(i for i in words if i.startswith('-#'))
-        self.exclude_tags = set(i[1:] for i in exclude_tags)
+        words = {i.lower() for i in s.split()}
+        exclude_tags = {i for i in words if i.startswith('-#')}
+        self.exclude_tags = {i[1:] for i in exclude_tags}
         self.words = words - exclude_tags
 
     def found(self, *fields: str, tags: str = '') -> bool:
         if not self.filter_string:
             return True
-        low_fields = set(i.lower() for i in fields)
+        low_fields = {i.lower() for i in fields}
         if tags:
             low_fields.add(tags.lower())
-            words = set(i.lower() for i in tags.split())
+            words = {i.lower() for i in tags.split()}
             if any(i in words for i in self.exclude_tags):
                 return False
         return all(any(f2.find(s) >= 0 for f2 in low_fields) for s in self.words)
