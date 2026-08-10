@@ -65,7 +65,9 @@ SORT_UP = '\u2191'
 SORT_DOWN = '\u2193'
 
 
-class Main(App, ListProto3):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
+class Main(App, ListProto3):
+    # pylint: disable=too-many-instance-attributes,too-many-public-methods
+    # pylint: disable=attribute-defined-outside-init
     def __init__(self, db: Db, screen):
         super().__init__(screen)
 
@@ -82,8 +84,6 @@ class Main(App, ListProto3):  # pylint: disable=too-many-instance-attributes,too
         # title, last_mod, created, tags
         self.row_string = RowString(70, 19, 19, 0)  # title, last_mod, created, url
         self.row_string2 = RowString(4, 70 - 4)  # indent, tags
-
-        self.create_windows()
 
     def sort(self, sortby: SORT):
         self.sortedby = sortby
@@ -203,6 +203,7 @@ class Main(App, ListProto3):  # pylint: disable=too-many-instance-attributes,too
 
     def refresh_all(self):
         self.screen.clear()
+        self.create_windows()
 
         self.show_header()
 
