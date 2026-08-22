@@ -85,6 +85,9 @@ class Main(App, ListProto3):
         self.row_string = RowString(70, 19, 19, 0)  # title, last_mod, created, url
         self.row_string2 = RowString(4, 70 - 4)  # indent, tags
 
+        self.win = List3(self, height=2, current_color=curses.color_pair(1))
+        self.create_windows()
+
     def sort(self, sortby: SORT):
         self.sortedby = sortby
         self.records = [r.uuid for r in self.db.sort(sortby, self.show_deleted) if self.filter_record(r)]
@@ -127,8 +130,10 @@ class Main(App, ListProto3):
         len_ = len(prompt)
         self.win_search = self.screen.derwin(1, maxx - len_, 1, len_)
 
+        self.list_header = self.screen.derwin(maxy - 3, maxx, 2, 0)
+
         win = self.screen.derwin(rows, cols1 - 3, 4, 2)
-        self.win = List3(win, self, height=2, current_color=curses.color_pair(1))
+        self.win.set_win(win)
 
         if no_win2:
             self.win2 = None
@@ -202,8 +207,7 @@ class Main(App, ListProto3):
         self.win_header.refresh()
 
     def refresh_all(self):
-        self.screen.clear()
-        self.create_windows()
+        self.screen.erase()
 
         self.show_header()
 
@@ -214,12 +218,10 @@ class Main(App, ListProto3):
         win_addstr(self.win_search, 0, 0, self.filter.filter_string)
         self.win_search.refresh()
 
-        maxy, maxx = self.screen_size
-        win = self.screen.derwin(maxy - 3, maxx, 2, 0)
-        win.erase()
-        win_addstr(win, 1, 2, self.create_header())
-        win.box()
-        win.refresh()
+        self.list_header.erase()
+        win_addstr(self.list_header, 1, 2, self.create_header())
+        self.list_header.box()
+        self.list_header.refresh()
 
         self.win.refresh()
 
