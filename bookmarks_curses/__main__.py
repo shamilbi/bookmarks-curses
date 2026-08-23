@@ -156,6 +156,7 @@ class Main(App, ListProto3):
             uuid = self.records[idx]
             r = self.db.get_by_uuid(uuid)
             record2win(r, win)
+            win.refresh()
         self.win2.refresh()
 
     def del_record(self, i: int):
