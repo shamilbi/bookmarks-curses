@@ -9,6 +9,7 @@ from functools import partial
 
 from curses_utils2.app import App, escape2terminal, input_search, start_curses_app
 from curses_utils2.list3 import List3, ListProto3
+from curses_utils2.listbox import ListBox
 from curses_utils2.text import win_help
 from curses_utils2.win import ask_delete, win_addstr
 
@@ -86,6 +87,7 @@ class Main(App, ListProto3):
         self.row_string2 = RowString(4, 70 - 4)  # indent, tags
 
         self.win = List3(self, height=2, current_color=curses.color_pair(1))
+        self.listbox = ListBox(self.win, header=1)
         self.create_windows()
 
     def sort(self, sortby: SORT):
@@ -120,7 +122,7 @@ class Main(App, ListProto3):
         maxy, maxx = self.screen_size
         self.win_header = self.screen.derwin(1, maxx, 0, 0)
 
-        rows, cols = (maxy - 6, maxx)
+        cols = maxx
         cols2 = min(cols // 3, 35)
         cols1 = cols - cols2
         if no_win2 := cols1 < sum(self.row_string.widths[:3]):
@@ -130,10 +132,8 @@ class Main(App, ListProto3):
         len_ = len(prompt)
         self.win_search = self.screen.derwin(1, maxx - len_, 1, len_)
 
-        self.list_header = self.screen.derwin(maxy - 3, maxx, 2, 0)
-
-        win = self.screen.derwin(rows, cols1 - 3, 4, 2)
-        self.win.set_win(win)
+        win = self.screen.derwin(maxy - 3, cols1 + 1, 2, 0)
+        self.listbox.set_win(win)
 
         if no_win2:
             self.win2 = None
@@ -219,12 +219,7 @@ class Main(App, ListProto3):
         win_addstr(self.win_search, 0, 0, self.filter.filter_string)
         self.win_search.refresh()
 
-        self.list_header.erase()
-        win_addstr(self.list_header, 1, 2, self.create_header())
-        self.list_header.box()
-        self.list_header.refresh()
-
-        self.win.refresh()
+        self.listbox.refresh(self.create_header())
 
         if self.win2:
             self.win2.erase()
