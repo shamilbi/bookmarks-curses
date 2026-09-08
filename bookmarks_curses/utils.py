@@ -5,10 +5,10 @@ from subprocess import PIPE, Popen
 # ruff: noqa: DTZ006 `datetime.datetime.fromtimestamp()` called without a `tz` argument
 
 
-def int2time(i: int) -> str:
+def int2time(i: int, format_: str) -> str:
     if not i:
         return ''
-    return datetime.fromtimestamp(i).strftime('%Y-%m-%d %H:%M:%S')
+    return datetime.fromtimestamp(i).strftime(format_)
 
 
 def chunkstring(s: str, chunk_len: int) -> Generator[str]:
