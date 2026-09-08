@@ -83,7 +83,7 @@ class Main(App, ListProto3):
         self.sort(SORT.LAST_MOD)
 
         # title, last_mod, created, tags
-        self.row_string = RowString(70, 19, 19, 0)  # title, last_mod, created, url
+        self.row_string = RowString(70, 10, 10, 0)  # title, last_mod, created, url
         self.row_string2 = RowString(4, 70 - 4)  # indent, tags
 
         self.win = List3(self, height=2, current_color=curses.color_pair(1))
@@ -123,16 +123,17 @@ class Main(App, ListProto3):
         self.win_header = self.screen.derwin(1, maxx, 0, 0)
 
         cols = maxx
-        cols2 = min(cols // 3, 35)
+        cols2 = 35
         cols1 = cols - cols2
-        if no_win2 := cols1 < sum(self.row_string.widths[:3]):
+        min_width1 = sum(self.row_string.widths[:3]) + 3 + 2  # 3 spaces + 2 border
+        if no_win2 := (cols - cols2) < min_width1:
             cols1 = cols
 
         prompt = self.prompt_search = ' Search: '
         len_ = len(prompt)
         self.win_search = self.screen.derwin(1, maxx - len_, 1, len_)
 
-        win = self.screen.derwin(maxy - 3, cols1 + 1, 2, 0)
+        win = self.screen.derwin(maxy - 3, cols1, 2, 0)
         self.listbox.set_win(win)
 
         if no_win2:
@@ -177,7 +178,12 @@ class Main(App, ListProto3):
 
     def get_record_str(self, i: int) -> Generator[str]:
         if (uuid := self.get_record(i)) and (r := self.db.get_by_uuid(uuid)):
-            yield self.row_string.value(r.title, int2time(r.last_mod), int2time(r.created), r.url)
+            yield self.row_string.value(
+                r.title,
+                int2time(r.last_mod, '%Y-%m-%d'),
+                int2time(r.created, '%Y-%m-%d'),
+                r.url,
+            )
             yield self.row_string2.value('', r.tags)
 
     def records_len(self) -> int:
@@ -223,7 +229,7 @@ class Main(App, ListProto3):
 
         if self.win2:
             self.win2.erase()
-            self.win2.border(0, 0, 0, 0, curses.ACS_TTEE, 0, curses.ACS_BTEE, 0)
+            self.win2.box()
             self.win2.refresh()
 
         self.refresh_win_deps()
@@ -401,6 +407,18 @@ def record2win(r: Record | None, win):
         return
     rows, cols = win.getmaxyx()
     row = -1
+
+    # time
+    for i, prefix in [(r.created, 'Created'), (r.last_mod, 'Modified')]:
+        row += 1
+        s = int2time(i, '%Y-%m-%d %H:%M:%S')
+        win_addstr(win, row, 0, f'{prefix}: {s}')
+
+    # separator
+    row += 1
+    win_addstr(win, row, 0, '')
+
+    # record
     for line in record2str(r).splitlines():
         for s in chunkstring(line, cols):
             row += 1
