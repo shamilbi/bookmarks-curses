@@ -8,10 +8,10 @@ from collections.abc import Generator
 from functools import partial
 
 from curses_utils2.app import App, escape2terminal, input_search, start_curses_app
-from curses_utils2.list3 import List3, ListProto3
-from curses_utils2.listbox import ListBox
+from curses_utils2.list3_v2 import List3v2, ListProto3
 from curses_utils2.text import win_help
 from curses_utils2.win import ask_delete, win_addstr
+from curses_utils2.winbox import WinBox, WinProto
 
 from . import __project_name__, __version__
 from .db import (
@@ -66,7 +66,53 @@ SORT_UP = '\u2191'
 SORT_DOWN = '\u2193'
 
 
-class Main(App, ListProto3):
+class Win2(WinProto):
+    def __init__(self, app: "Main"):
+        self.app = app
+        self.win: curses.window | None = None
+
+    def set_win(self, win: curses.window | None):
+        self.win = win
+
+    def refresh(self):
+        if not self.win:
+            return
+        app = self.app
+        win = self.win
+
+        win.erase()
+        idx = app.win.idx
+        if idx < len(app.records):
+            uuid = app.records[idx]
+            r = app.db.get_by_uuid(uuid)
+            record2win(r, win)
+        win.refresh()
+
+
+class List1(ListProto3):
+    def __init__(self, app: "Main"):
+        self.app = app
+
+    def get_record_str(self, i: int) -> Generator[str]:
+        'yields <height> lines'
+        app = self.app
+        if (uuid := app.get_record(i)) and (r := app.db.get_by_uuid(uuid)):
+            yield app.row_string.value(
+                r.title,
+                int2time(r.last_mod, '%Y-%m-%d'),
+                int2time(r.created, '%Y-%m-%d'),
+                r.url,
+            )
+            yield app.row_string2.value('', r.tags)
+
+    def records_len(self) -> int:
+        return len(self.app.records)
+
+    def refresh_win_deps(self):
+        self.app.win2box.refresh()
+
+
+class Main(App):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
     # pylint: disable=attribute-defined-outside-init
     def __init__(self, db: Db, screen):
@@ -86,8 +132,15 @@ class Main(App, ListProto3):
         self.row_string = RowString(70, 10, 10, 0)  # title, last_mod, created, url
         self.row_string2 = RowString(4, 70 - 4)  # indent, tags
 
-        self.win = List3(self, height=2, current_color=curses.color_pair(1))
-        self.listbox = ListBox(self.win, header=1)
+        self.win = List3v2(
+            List1(self),
+            height=2,
+            current_color=curses.color_pair(1),
+        )
+        self.listbox = WinBox(self.win, offy=1)
+
+        self.win2box = WinBox(Win2(self))
+
         self.create_windows()
 
     def sort(self, sortby: SORT):
@@ -97,7 +150,7 @@ class Main(App, ListProto3):
     def sort2(self, sortby: SORT):
         idx = self.win.idx
         uuid = None
-        if idx < self.records_len():
+        if idx < len(self.records):
             uuid = self.records[idx]
         self.sort(sortby)
         # find new index of the record
@@ -137,28 +190,13 @@ class Main(App, ListProto3):
         self.listbox.set_win(win)
 
         if no_win2:
-            self.win2 = None
+            win2 = None
         else:
-            self.win2 = self.screen.derwin(maxy - 3, cols2, 2, cols1)
+            win2 = self.screen.derwin(maxy - 3, cols2, 2, cols1)
+        self.win2box.set_win(win2)
 
         # status
         self.win3 = self.screen.derwin(1, maxx, maxy - 1, 0)
-
-    def refresh_win_deps(self):
-        if not self.win2:
-            return
-        rows, cols = self.win2.getmaxyx()
-        rows -= 2  # -borders
-        cols -= 2  # -borders
-        win = self.win2.derwin(rows, cols, 1, 1)
-        win.erase()
-        idx = self.win.idx
-        if idx < len(self.records):
-            uuid = self.records[idx]
-            r = self.db.get_by_uuid(uuid)
-            record2win(r, win)
-            win.refresh()
-        self.win2.refresh()
 
     def del_record(self, i: int):
         if not (uuid := self.get_record(i)):
@@ -175,19 +213,6 @@ class Main(App, ListProto3):
         if i >= len_:
             return None
         return self.records[i]
-
-    def get_record_str(self, i: int) -> Generator[str]:
-        if (uuid := self.get_record(i)) and (r := self.db.get_by_uuid(uuid)):
-            yield self.row_string.value(
-                r.title,
-                int2time(r.last_mod, '%Y-%m-%d'),
-                int2time(r.created, '%Y-%m-%d'),
-                r.url,
-            )
-            yield self.row_string2.value('', r.tags)
-
-    def records_len(self) -> int:
-        return len(self.records)
 
     def filter_record(self, record: Record):
         return self.filter.found(record.title, record.url, tags=record.tags)
@@ -215,11 +240,11 @@ class Main(App, ListProto3):
 
     def refresh_all(self):
         self.screen.erase()
+        self.screen.refresh()
 
         self.show_header()
 
         win_addstr(self.screen, 1, 0, self.prompt_search)
-        self.screen.refresh()
 
         self.win_search.erase()
         win_addstr(self.win_search, 0, 0, self.filter.filter_string)
@@ -227,12 +252,7 @@ class Main(App, ListProto3):
 
         self.listbox.refresh(self.create_header())
 
-        if self.win2:
-            self.win2.erase()
-            self.win2.box()
-            self.win2.refresh()
-
-        self.refresh_win_deps()
+        self.screen.refresh()
 
     def run(self):
         self.refresh_all()
@@ -343,8 +363,10 @@ class Main(App, ListProto3):
             elif char == 'U':
                 self.show_url()
             elif char_ord == curses.KEY_F1:
-                win_help(self.win.win, HELP)
-                self.refresh_all()
+                win = self.win.win
+                if win:
+                    win_help(win, HELP)
+                    self.refresh_all()
             elif char_ord == 12:  # ^L
                 self.url2clipboard()
             elif char_ord == 20:  # ^T
