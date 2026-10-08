@@ -81,11 +81,12 @@ class Win2(WinProto):
         win = self.win
 
         win.erase()
-        idx = app.win.idx
-        if idx < len(app.records):
-            uuid = app.records[idx]
-            r = app.db.get_by_uuid(uuid)
-            record2win(r, win)
+        if app.win.win:
+            idx = app.win.idx
+            if idx < len(app.records):
+                uuid = app.records[idx]
+                r = app.db.get_by_uuid(uuid)
+                record2win(r, win)
         win.refresh()
 
 
