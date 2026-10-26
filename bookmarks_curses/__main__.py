@@ -7,9 +7,10 @@ import webbrowser
 from collections.abc import Generator
 from functools import partial
 
-from curses_utils2.app import App, escape2terminal, input_search, start_curses_app
+from curses_utils2.app2 import AppProto, AppSwitch, AppSwitchProto
 from curses_utils2.list3_v2 import List3v2, ListProto3
 from curses_utils2.text import win_help
+from curses_utils2.utils import RowString, screen_size, start_curses_app
 from curses_utils2.win import ask_delete, win_addstr
 from curses_utils2.winbox import WinBox, WinProto
 
@@ -28,7 +29,6 @@ from .file_utils import input_file
 from .import_diigo import import_html
 from .utils import (
     FilterString,
-    RowString,
     chunkstring,
     int2time,
     str2clipboard,
@@ -67,7 +67,7 @@ SORT_DOWN = '\u2193'
 
 
 class Win2(WinProto):
-    def __init__(self, app: "Main"):
+    def __init__(self, app: "App"):
         self.app = app
         self.win: curses.window | None = None
 
@@ -91,7 +91,7 @@ class Win2(WinProto):
 
 
 class List1(ListProto3):
-    def __init__(self, app: "Main"):
+    def __init__(self, app: "App"):
         self.app = app
 
     def get_record_str(self, i: int) -> Generator[str]:
@@ -113,13 +113,14 @@ class List1(ListProto3):
         self.app.win2box.refresh()
 
 
-class Main(App):
+class App(AppProto):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
     # pylint: disable=attribute-defined-outside-init
-    def __init__(self, db: Db, screen):
-        super().__init__(screen)
-
+    def __init__(self, db: Db, parent: AppSwitchProto):
         self.db = db
+
+        self.parent = parent
+        self.screen = self.parent.screen
 
         curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
         curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
@@ -142,7 +143,9 @@ class Main(App):
 
         self.win2box = WinBox(Win2(self))
 
+    def sigwinch_handler(self, *_):
         self.create_windows()
+        self.refresh_all()
 
     def sort(self, sortby: SORT):
         self.sortedby = sortby
@@ -173,7 +176,7 @@ class Main(App):
         ---------------------
         status ...
         '''
-        maxy, maxx = self.screen_size
+        maxy, maxx = screen_size()
         self.win_header = self.screen.derwin(1, maxx, 0, 0)
 
         cols = maxx
@@ -255,10 +258,6 @@ class Main(App):
 
         self.screen.refresh()
 
-    def run(self):
-        self.refresh_all()
-        self.input_loop()
-
     def handle_alt_key(self, ch: int):
         if (ch2 := chr(ch)) in SORT:
             self.sort2(SORT(ch2))
@@ -270,7 +269,7 @@ class Main(App):
         win.refresh()
 
     def search(self):
-        ok, s = input_search(self, self.prompt_search.lstrip())
+        ok, s = self.parent.input_search(self.prompt_search.lstrip())
         if ok:
             self.filter.set(s)
             win_addstr(self.win_search, 0, 0, self.filter.filter_string)
@@ -296,7 +295,7 @@ class Main(App):
             return
         if r.url:
             if shutil.which("qrencode"):
-                with escape2terminal(self):
+                with self.parent.escape2terminal():
                     print(f'URL: {r.url}')
                     subprocess.run(['qrencode', '-t', 'ansiutf8', '-o', '-', r.url], check=False)
                     input('Press Enter to continue...')
@@ -338,45 +337,46 @@ class Main(App):
         else:
             self.status('Tags is empty')
 
-    def input_loop(self):  # pylint: disable=too-many-branches,too-many-statements
-        for char_ord in self.getch():
-            char = chr(char_ord)
+    # pylint: disable=too-many-branches,too-many-statements,useless-return
+    def handle_key(self, ch: int) -> str | None:  # switch to another app?
+        char = chr(ch)
 
-            if char_ord == curses.KEY_DC:  # delete
-                self.del_record(self.win.idx)
-            elif char_ord == curses.KEY_IC:  # insert
-                self.insert_record(self.win.idx)
-            elif self.win.handle_input(char_ord):
-                pass
-            elif char == 'e':
-                self.edit_record(self.win.idx)  # not using curses
-            elif char == 's':
-                self.filter.set()
-                self.search()
-            elif char == 'L':
-                self.run_url()
-            elif char == 'I':
-                self.import_html()
-            elif char == 'D':
-                self.show_deleted = not self.show_deleted
-                self.show_header()
-                self.sort2(self.sortedby)
-            elif char == 'U':
-                self.show_url()
-            elif char_ord == curses.KEY_F1:
-                win = self.win.win
-                if win:
-                    win_help(win, HELP)
-                    self.refresh_all()
-            elif char_ord == 12:  # ^L
-                self.url2clipboard()
-            elif char_ord == 20:  # ^T
-                self.title2clipboard()
-            elif char_ord == 7:  # ^G
-                self.tags2clipboard()
-            else:
-                name = curses.keyname(char_ord).decode('utf-8')
-                self.status(f'{char_ord=}, {name=}')
+        if ch == curses.KEY_DC:  # delete
+            self.del_record(self.win.idx)
+        elif ch == curses.KEY_IC:  # insert
+            self.insert_record(self.win.idx)
+        elif self.win.handle_input(ch):
+            pass
+        elif char == 'e':
+            self.edit_record(self.win.idx)  # not using curses
+        elif char == 's':
+            self.filter.set()
+            self.search()
+        elif char == 'L':
+            self.run_url()
+        elif char == 'I':
+            self.import_html()
+        elif char == 'D':
+            self.show_deleted = not self.show_deleted
+            self.show_header()
+            self.sort2(self.sortedby)
+        elif char == 'U':
+            self.show_url()
+        elif ch == curses.KEY_F1:
+            win = self.win.win
+            if win:
+                win_help(win, HELP)
+                self.refresh_all()
+        elif ch == 12:  # ^L
+            self.url2clipboard()
+        elif ch == 20:  # ^T
+            self.title2clipboard()
+        elif ch == 7:  # ^G
+            self.tags2clipboard()
+        else:
+            name = curses.keyname(ch).decode('utf-8')
+            self.status(f'{ch=}, {name=}')
+        return None
 
     def edit_record(self, i: int):
         if (uuid := self.get_record(i)) and (r := self.db.get_by_uuid(uuid)):
@@ -384,7 +384,7 @@ class Main(App):
         else:
             return
         res = EDIT.NONE
-        with escape2terminal(self):
+        with self.parent.escape2terminal():
             res = self.db.edit_record(r)
         match res:
             case EDIT.NONE:
@@ -399,7 +399,7 @@ class Main(App):
     def insert_record(self, i: int):
         r = Record.create()
         res = EDIT.NONE
-        with escape2terminal(self):
+        with self.parent.escape2terminal():
             res = self.db.insert_record(r)
         match res:
             case EDIT.NONE:
@@ -414,7 +414,7 @@ class Main(App):
                 self.status(f'error: {self.db.error}')
 
     def import_html(self):
-        with escape2terminal(self):
+        with self.parent.escape2terminal():
             res = import_html(self.db)
         self.sort(self.sortedby)
         self.win.refresh()
@@ -450,12 +450,20 @@ def record2win(r: Record | None, win):
             win_addstr(win, row, 0, s)
 
 
+class Main(AppSwitch):
+    def __init__(self, db, screen):
+        super().__init__(screen)
+        self.app = App(db, self)
+        self.apps = {'b': self.app}
+
+
 def main2(db, screen):
     app = Main(db, screen)
     app.run()
 
 
 def main():
+    print(f'{__project_name__} v{__version__}')
     try:
         fpath = input_file('sqlite file: ')
         if not os.path.exists(fpath):
