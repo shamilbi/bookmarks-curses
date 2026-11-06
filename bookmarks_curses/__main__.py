@@ -8,6 +8,7 @@ from collections.abc import Generator
 from functools import partial
 
 from curses_utils2.app2 import AppProto, AppSwitch, AppSwitchProto
+from curses_utils2.file_utils import input_file
 from curses_utils2.list3_v2 import List3v2, ListProto3
 from curses_utils2.text import win_help
 from curses_utils2.utils import RowString, screen_size, start_curses_app
@@ -25,7 +26,6 @@ from .db import (
     record2str,
     sqlite_db,
 )
-from .file_utils import input_file
 from .import_diigo import import_html
 from .utils import (
     FilterString,
@@ -128,7 +128,7 @@ class App(AppProto):
         self.records: list[str] = []  # uuid
         self.filter = FilterString()
         self.show_deleted = False
-        self.sort(SORT.LAST_MOD)
+        self.sortedby = SORT.LAST_MOD
 
         # title, last_mod, created, tags
         self.row_string = RowString(70, 10, 10, 0)  # title, last_mod, created, url
@@ -144,6 +144,11 @@ class App(AppProto):
         self.win2box = WinBox(Win2(self))
 
     def sigwinch_handler(self, *_):
+        self.create_windows()
+        self.refresh_all()
+
+    def run(self):
+        self.sort(self.sortedby)
         self.create_windows()
         self.refresh_all()
 
@@ -455,6 +460,9 @@ class Main(AppSwitch):
         super().__init__(screen)
         self.app = App(db, self)
         self.apps = {'b': self.app}
+
+    def get_info(self, about: str) -> dict:
+        return {}
 
 
 def main2(db, screen):
