@@ -3,8 +3,9 @@ import os
 import re
 from collections import deque
 
+from curses_utils2.file_utils import input_file
+
 from .db import MERGE, Db, Record
-from .file_utils import input_file
 
 
 class Import:
