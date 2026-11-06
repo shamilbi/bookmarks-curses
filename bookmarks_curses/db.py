@@ -11,7 +11,7 @@ from enum import IntEnum, StrEnum
 from sqlite3 import Cursor, OperationalError, connect
 from uuid import uuid4
 
-from .file_utils import create_memfd2
+from curses_utils2.file_utils import create_memfd2
 
 
 @contextmanager
