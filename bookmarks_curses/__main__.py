@@ -11,7 +11,7 @@ from curses_utils2.app2 import AppProto, AppSwitch, AppSwitchProto
 from curses_utils2.file_utils import input_file
 from curses_utils2.list3_v2 import List3v2, ListProto3
 from curses_utils2.text import win_help
-from curses_utils2.utils import RowString, screen_size, start_curses_app
+from curses_utils2.utils import RowString, chunkstring, screen_size, start_curses_app
 from curses_utils2.win import ask_delete, win_addstr
 from curses_utils2.winbox import WinBox, WinProto
 
@@ -29,7 +29,6 @@ from .db import (
 from .import_diigo import import_html
 from .utils import (
     FilterString,
-    chunkstring,
     int2time,
     str2clipboard,
 )
