@@ -42,6 +42,16 @@ def connect(fpath: str, replace=False) -> Generator[Connection]:
         conn.close()
 
 
+@contextmanager
+def sqlite_db(fpath: str, replace=False) -> Generator[SqliteDb]:
+    with connect(fpath, replace=replace) as conn:
+        db = SqliteDb(conn)
+        try:
+            yield db
+        finally:
+            db.close()
+
+
 class DbProto(Protocol):
     error: str | None
 
