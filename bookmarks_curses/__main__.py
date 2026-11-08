@@ -10,6 +10,7 @@ from functools import partial
 from curses_utils2.app2 import AppProto, AppSwitch, AppSwitchProto
 from curses_utils2.file_utils import input_file
 from curses_utils2.list3_v2 import List3v2, ListProto3
+from curses_utils2.record import record2str
 from curses_utils2.text import win_help
 from curses_utils2.utils import RowString, chunkstring, screen_size, start_curses_app
 from curses_utils2.win import ask_delete, win_addstr
@@ -20,13 +21,12 @@ from .db import (
     EDIT,
     SORT,
     SORTED,
-    Db,
     Record,
+    create_tables,
     is_sorted,
-    record2str,
-    sqlite_db,
 )
 from .import_diigo import import_html
+from .sqlite_utils import DbProto, sqlite_db
 from .utils import (
     FilterString,
     int2time,
@@ -70,6 +70,8 @@ class Win2(WinProto):
         self.app = app
         self.win: curses.window | None = None
 
+        self.r0 = Record()
+
     def set_win(self, win: curses.window | None):
         self.win = win
 
@@ -81,10 +83,8 @@ class Win2(WinProto):
 
         win.erase()
         if app.win.win:
-            idx = app.win.idx
-            if idx < len(app.records):
-                uuid = app.records[idx]
-                r = app.db.get_by_uuid(uuid)
+            _, r = app.get_uuid_r()
+            if r:
                 record2win(r, win)
         win.refresh()
 
@@ -92,11 +92,12 @@ class Win2(WinProto):
 class List1(ListProto3):
     def __init__(self, app: "App"):
         self.app = app
+        self.r0 = Record()
 
     def get_record_str(self, i: int) -> Generator[str]:
         'yields <height> lines'
         app = self.app
-        if (uuid := app.get_record(i)) and (r := app.db.get_by_uuid(uuid)):
+        if (uuid := app.get_record(i)) and (r := self.r0.get_by_uuid(app.db, uuid)):
             yield app.row_string.value(
                 r.title,
                 int2time(r.last_mod, '%Y-%m-%d'),
@@ -115,8 +116,9 @@ class List1(ListProto3):
 class App(AppProto):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
     # pylint: disable=attribute-defined-outside-init
-    def __init__(self, db: Db, parent: AppSwitchProto):
+    def __init__(self, db: DbProto, parent: AppSwitchProto):
         self.db = db
+        self.r0 = Record()
 
         self.parent = parent
         self.screen = self.parent.screen
@@ -153,7 +155,7 @@ class App(AppProto):
 
     def sort(self, sortby: SORT):
         self.sortedby = sortby
-        self.records = [r.uuid for r in self.db.sort(sortby, self.show_deleted) if self.filter_record(r)]
+        self.records = [r.uuid for r in self.r0.sort(self.db, sortby, self.show_deleted) if self.filter_record(r)]
 
     def sort2(self, sortby: SORT):
         idx = self.win.idx
@@ -210,7 +212,7 @@ class App(AppProto):
         if not (uuid := self.get_record(i)):
             return
         if ask_delete(self.screen, color=curses.color_pair(2)):
-            if self.db.mark_del(uuid, True):
+            if self.r0.mark_del(self.db, uuid):
                 del self.records[i]
             else:
                 self.status(f'error: {self.db.error}')
@@ -279,8 +281,19 @@ class App(AppProto):
             win_addstr(self.win_search, 0, 0, self.filter.filter_string)
             self.sort2(self.sortedby)
 
+    def get_uuid_r(self) -> tuple[str | None, Record | None]:
+        'current uuid, Record'
+        uuid = self.get_record(self.win.idx)
+        if not uuid:
+            return None, None
+        r = self.r0.get_by_uuid(self.db, uuid)
+        if not r:
+            return uuid, None
+        return uuid, r
+
     def run_url(self):
-        if (uuid := self.get_record(self.win.idx)) and (r := self.db.get_by_uuid(uuid)) and r.url:
+        uuid, r = self.get_uuid_r()
+        if uuid and r and r.url:
             pass
         else:
             return
@@ -293,7 +306,8 @@ class App(AppProto):
             self.status(f'Could not load python module "webbrowser" for {r.url=}')
 
     def show_url(self):
-        if (uuid := self.get_record(self.win.idx)) and (r := self.db.get_by_uuid(uuid)):
+        uuid, r = self.get_uuid_r()
+        if uuid and r:
             pass
         else:
             return
@@ -309,7 +323,8 @@ class App(AppProto):
             self.status('URL is empty')
 
     def url2clipboard(self):
-        if (uuid := self.get_record(self.win.idx)) and (r := self.db.get_by_uuid(uuid)):
+        uuid, r = self.get_uuid_r()
+        if uuid and r:
             pass
         else:
             return
@@ -320,7 +335,8 @@ class App(AppProto):
             self.status('URL is empty')
 
     def title2clipboard(self):
-        if (uuid := self.get_record(self.win.idx)) and (r := self.db.get_by_uuid(uuid)):
+        uuid, r = self.get_uuid_r()
+        if uuid and r:
             pass
         else:
             return
@@ -331,7 +347,8 @@ class App(AppProto):
             self.status('Title is empty')
 
     def tags2clipboard(self):
-        if (uuid := self.get_record(self.win.idx)) and (r := self.db.get_by_uuid(uuid)):
+        uuid, r = self.get_uuid_r()
+        if uuid and r:
             pass
         else:
             return
@@ -383,35 +400,30 @@ class App(AppProto):
         return None
 
     def edit_record(self, i: int):
-        if (uuid := self.get_record(i)) and (r := self.db.get_by_uuid(uuid)):
+        if (uuid := self.get_record(i)) and (r := self.r0.get_by_uuid(self.db, uuid)):
             pass
         else:
             return
         res = EDIT.NONE
         with self.parent.escape2terminal():
-            res = self.db.edit_record(r)
+            res = r.edit_record(self.db)
         match res:
             case EDIT.NONE:
                 pass
-            case EDIT.OK1:
-                self.win.refresh()
-            case EDIT.OK2:
+            case EDIT.OK:
                 self.sort2(self.sortedby)
             case _:
                 self.status(f'error: {self.db.error}')
 
     def insert_record(self, i: int):
-        r = Record.create()
+        r = Record()
         res = EDIT.NONE
         with self.parent.escape2terminal():
-            res = self.db.insert_record(r)
+            res = r.insert_record(self.db)
         match res:
             case EDIT.NONE:
                 pass
-            case EDIT.OK1:
-                self.records.insert(i, r.uuid)
-                self.win.refresh()
-            case EDIT.OK2:
+            case EDIT.OK:
                 self.records.insert(i, r.uuid)
                 self.sort2(self.sortedby)
             case _:
@@ -478,6 +490,7 @@ def main():
     except KeyboardInterrupt:
         return
     with sqlite_db(fpath) as db:
+        create_tables(db)
         main2_ = partial(main2, db)
         start_curses_app(main2_, __project_name__, __version__)
 
