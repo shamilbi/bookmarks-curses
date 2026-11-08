@@ -5,7 +5,8 @@ from collections import deque
 
 from curses_utils2.file_utils import input_file
 
-from .db import MERGE, Db, Record
+from .db import MERGE, Record
+from .sqlite_utils import DbProto
 
 
 class Import:
@@ -19,7 +20,7 @@ class Import:
         return self.ok
 
 
-def import_html(db: Db) -> Import:
+def import_html(db: DbProto) -> Import:
     res = Import()
     try:
         while True:
@@ -40,21 +41,21 @@ def import_html(db: Db) -> Import:
     return res
 
 
-def import_html_dp(db: Db, fpath: str) -> Import:
+def import_html_dp(db: DbProto, fpath: str) -> Import:
     res = Import()
     with open(fpath, 'r', encoding='utf-8') as fp:
         import_html2(db, res, fp)
     return res
 
 
-def import_html2(db: Db, res: Import, fp: io.TextIOBase):  # pylint: disable=too-many-branches
+def import_html2(db: DbProto, res: Import, fp: io.TextIOBase):  # pylint: disable=too-many-branches
     rq: deque[Record] = deque()  # last record to insert
 
     def check_prev_record() -> bool:
         if rq:
             r = rq.pop()
             r.notes = r.notes.rstrip()
-            match db.merge_record(r):
+            match r.merge_record(db):
                 case MERGE.ERROR:
                     res.error = 'merge error'
                     return False
@@ -131,7 +132,7 @@ def import_html2(db: Db, res: Import, fp: io.TextIOBase):  # pylint: disable=too
 
 
 def dt2record(line: str, res: Import) -> tuple[Record, bool]:
-    r = Record.create()
+    r = Record()
     m = re.search(r' HREF="([^"]*)" ', line)
     if not m:
         res.error = 'HREF not found'
