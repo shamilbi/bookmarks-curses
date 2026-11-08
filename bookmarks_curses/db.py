@@ -57,6 +57,19 @@ class Record(DbRecordProto):  # pylint: disable=too-many-instance-attributes
         yield ('tags', 'Tags', self.tags, Text2Field.SINGLE)
         yield ('notes', 'Notes', self.notes, Text2Field.MULTI)
 
+    def set_dict(self, d: dict) -> bool:
+        for name, value in d.items():
+            match name:
+                case 'url':
+                    self.url = value
+                case 'title':
+                    self.title = value
+                case 'tags':
+                    self.tags = value
+                case 'notes':
+                    self.notes = value
+        return True
+
     def set_tuple(self, t: tuple):
         [
             self.title,
