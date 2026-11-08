@@ -1,39 +1,14 @@
 from __future__ import annotations
 
-import os
 import time
-from collections import deque
 from collections.abc import Generator, Iterable
-from contextlib import contextmanager
 from enum import IntEnum, StrEnum
-from sqlite3 import Cursor, OperationalError, connect
 from typing import Self
 from uuid import uuid4
 
 from curses_utils2.record import Text2Field, edit_record
 
-from .sqlite_utils import EDIT, DbProto, DbRecordProto, update_sql
-
-
-@contextmanager
-def sqlite_db(fpath: str, replace=False) -> Generator[Db]:
-    if fpath != ':memory:':
-        if replace and os.path.exists(fpath):
-            os.remove(fpath)
-        if not os.path.exists(fpath):
-            with open(fpath, 'wb'):
-                pass
-        os.chmod(fpath, 0o600)
-    conn = connect(fpath, autocommit=False)
-    # conn.enable_load_extension(True)
-    # conn.load_extension(sqlite_icu.extension_path().replace('.so', ''))
-    db = Db(conn)
-    yield db
-    db.close()
-    conn.close()
-
-
-ERRORS = (OperationalError,)
+from .sqlite_utils import EDIT, ERRORS, DbProto, DbRecordProto, update_sql
 
 TABLE_NAME = 'bookmarks'
 CREATE_SQL = f'''\
@@ -289,32 +264,6 @@ def is_sorted(key: str, sort: SORT) -> SORTED:
     return SORTED.NO
 
 
-class Db:
-    def __init__(self, conn):
-        self.conn = conn
-        self.cursors: deque[Cursor] = deque()
-        self.error = None
-        self._create_table()
-
-    @contextmanager
-    def _cursor(self):
-        try:
-            cur = self.cursors.pop()  # last unused cursor
-        except IndexError:
-            cur = self.conn.cursor()
-        try:
-            yield cur
-        finally:
-            self.cursors.append(cur)
-
-    def close(self):
-        try:
-            while self.cursors:
-                self.cursors.pop().close()
-        except IndexError:
-            pass
-
-    def _create_table(self):
-        with self._cursor() as cur:
-            cur.executescript(CREATE_SQL)
-            self.conn.commit()
+def create_tables(db: DbProto):
+    with db.cursor() as cur:
+        cur.executescript(CREATE_SQL)
