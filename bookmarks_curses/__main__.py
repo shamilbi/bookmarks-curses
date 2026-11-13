@@ -132,7 +132,7 @@ class App(AppProto):
         self.sortedby = SORT.LAST_MOD
 
         # title, last_mod, created, tags
-        self.row_string = RowString(70, 10, 10, 0)  # title, last_mod, created, url
+        self.row_string = RowString(70, 11, 11, 0)  # title, last_mod, created, url
         self.row_string2 = RowString(4, 70 - 4)  # indent, tags
 
         self.win = List3v2(
